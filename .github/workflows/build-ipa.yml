@@ -50,11 +50,11 @@ concurrency:
 jobs:
   build-ipa:
     name: Build Unsigned IPA (${{ matrix.os }})
-    runs-on: macos-14
+    runs-on: macos-latest
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-14]
+        os: [macos-latest]
 
     steps:
       - name: Checkout Repository
