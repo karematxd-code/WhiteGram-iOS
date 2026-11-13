@@ -43,10 +43,6 @@ permissions:
   packages: write
   actions: read
 
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
-
 jobs:
   build-ipa:
     name: Build Unsigned IPA (${{ matrix.os }})
