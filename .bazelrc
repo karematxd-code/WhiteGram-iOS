@@ -1,0 +1,13 @@
+# WhiteGram-iOS Bazel Configuration
+
+build --apple_platform_type=ios
+build --ios_multi_cpus=arm64
+build --cpu=ios_arm64
+build --cxxopt=-std=c++20
+build --swiftcopt=-swift-version
+build --swiftcopt=5
+build --apple_generate_dsym=true
+build --strip=always
+build --action_env=PATH
+build --features=swift.enable_batch_mode
+common --announce_rc

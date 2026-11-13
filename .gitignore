@@ -1,0 +1,51 @@
+# Xcode
+.DS_Store
+*/.DS_Store
+build/
+DerivedData/
+*.pbxuser
+!default.pbxuser
+*.mode1v3
+!default.mode1v3
+*.mode2v3
+!default.mode2v3
+*.perspectivev3
+!default.perspectivev3
+xcuserdata
+*.xccheckout
+*.moved-aside
+*.xcuserstate
+*.xcbkptlist
+
+# Swift Package Manager
+.build/
+Packages/
+Package.resolved
+
+# Bazel
+bazel-*
+bazel-bin
+bazel-out
+bazel-testlogs
+bazel-WhiteGram
+
+# Outputs & Artifacts
+*.ipa
+*.ipa.sha256
+*.app
+*.dSYM
+*.dSYM.zip
+*.zip
+
+# Fastlane
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots
+fastlane/test_output
+
+# Certificates and Provisioning Profiles
+*.mobileprovision
+*.cer
+*.p12
+*.p8
+*.key

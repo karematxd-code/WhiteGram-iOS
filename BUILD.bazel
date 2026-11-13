@@ -1,0 +1,74 @@
+load("@build_bazel_rules_apple//apple:ios.bzl", "ios_application")
+load("@build_bazel_rules_swift//swift:swift.bzl", "swift_library")
+
+package(default_visibility = ["//visibility:public"])
+
+swift_library(
+    name = "WhiteGramCore",
+    srcs = glob(["Sources/WhiteGramCore/**/*.swift"]),
+    module_name = "WhiteGramCore",
+)
+
+swift_library(
+    name = "GhostMode",
+    srcs = glob(["Sources/GhostMode/**/*.swift"]),
+    module_name = "GhostMode",
+    deps = [
+        ":WhiteGramCore",
+    ],
+)
+
+swift_library(
+    name = "Gifts",
+    srcs = glob(["Sources/Gifts/**/*.swift"]),
+    module_name = "Gifts",
+    deps = [
+        ":WhiteGramCore",
+    ],
+)
+
+swift_library(
+    name = "Upgrader",
+    srcs = glob(["Sources/Upgrader/**/*.swift"]),
+    module_name = "Upgrader",
+    deps = [
+        ":WhiteGramCore",
+        ":Gifts",
+    ],
+)
+
+swift_library(
+    name = "ProfileSync",
+    srcs = glob(["Sources/ProfileSync/**/*.swift"]),
+    module_name = "ProfileSync",
+    deps = [
+        ":WhiteGramCore",
+    ],
+)
+
+swift_library(
+    name = "WhiteGramUI",
+    srcs = glob(["Sources/WhiteGramUI/**/*.swift"]),
+    module_name = "WhiteGramUI",
+    deps = [
+        ":WhiteGramCore",
+        ":GhostMode",
+        ":Gifts",
+        ":Upgrader",
+        ":ProfileSync",
+    ],
+)
+
+ios_application(
+    name = "WhiteGram",
+    bundle_id = "org.whitegram.messenger",
+    families = [
+        "iphone",
+        "ipad",
+    ],
+    infoplists = ["Configurations/WhiteGram-Info.plist"],
+    minimum_os_version = "15.0",
+    deps = [
+        ":WhiteGramUI",
+    ],
+)

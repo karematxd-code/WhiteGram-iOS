@@ -1,0 +1,23 @@
+* text=auto eol=lf
+*.swift text eol=lf diff=swift
+*.py text eol=lf diff=python
+*.sh text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.json text eol=lf
+*.md text eol=lf
+*.plist text eol=lf
+*.xcconfig text eol=lf
+*.bazel text eol=lf
+*.bzl text eol=lf
+WORKSPACE text eol=lf
+MODULE.bazel text eol=lf
+.bazelrc text eol=lf
+
+*.ipa binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.mp4 binary

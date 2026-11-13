@@ -1,0 +1,187 @@
+name: Build WhiteGram iOS IPA
+
+on:
+  push:
+    branches:
+      - main
+      - master
+      - 'release/**'
+    tags:
+      - 'v*'
+  pull_request:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+    inputs:
+      xcode_version:
+        description: 'Xcode version to use'
+        required: true
+        default: '15.4'
+        type: choice
+        options:
+          - '15.4'
+          - '16.0'
+          - 'default'
+      build_method:
+        description: 'Build method'
+        required: true
+        default: 'auto'
+        type: choice
+        options:
+          - 'auto'
+          - 'bazel'
+          - 'xcodebuild'
+      create_release:
+        description: 'Create GitHub Release on manual run'
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  packages: write
+  actions: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-ipa:
+    name: Build Unsigned IPA (${{ matrix.os }})
+    runs-on: macos-14
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-14]
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Select Xcode Version
+        run: |
+          echo "Configuring Xcode environment..."
+          REQUESTED_VERSION="${{ github.event.inputs.xcode_version || '15.4' }}"
+          if [ "$REQUESTED_VERSION" = "16.0" ] && [ -d "/Applications/Xcode_16.0.app" ]; then
+            sudo xcode-select -s /Applications/Xcode_16.0.app
+          elif [ -d "/Applications/Xcode_15.4.app" ]; then
+            sudo xcode-select -s /Applications/Xcode_15.4.app
+          elif [ -d "/Applications/Xcode.app" ]; then
+            sudo xcode-select -s /Applications/Xcode.app
+          fi
+          echo "Selected Xcode:"
+          xcodebuild -version
+          swift --version
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Set up Bazelisk & Tools
+        run: |
+          echo "Checking / Installing Bazelisk..."
+          if ! command -v bazelisk &> /dev/null; then
+            brew install bazelisk
+          fi
+          echo "Bazel version:"
+          bazelisk --version || bazel --version || true
+
+      - name: Restore Bazel Cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/bazel
+            /private/var/tmp/_bazel_*
+          key: ${{ runner.os }}-bazel-${{ hashFiles('**/BUILD.bazel', '**/WORKSPACE', '**/*.bzl') }}
+          restore-keys: |
+            ${{ runner.os }}-bazel-
+
+      - name: Restore SwiftPM Cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            .build
+            ~/Library/Caches/org.swift.swiftpm
+          key: ${{ runner.os }}-spm-${{ hashFiles('**/Package.resolved', '**/Package.swift') }}
+          restore-keys: |
+            ${{ runner.os }}-spm-
+
+      - name: Build and Package Unsigned IPA
+        id: build_ipa
+        run: |
+          chmod +x build-system/build_ipa.sh build-system/Make/Build.py
+          BUILD_METHOD="${{ github.event.inputs.build_method || 'auto' }}"
+          ./build-system/build_ipa.sh --method "$BUILD_METHOD" --configuration release
+
+      - name: Generate Checksums & Step Summary
+        run: |
+          IPA_PATH="build/artifacts/WhiteGram-unsigned.ipa"
+          SHA_PATH="build/artifacts/WhiteGram-unsigned.ipa.sha256"
+          
+          if [ -f "$IPA_PATH" ]; then
+            SIZE_BYTES=$(stat -f%z "$IPA_PATH" 2>/dev/null || stat -c%s "$IPA_PATH")
+            SIZE_MB=$(echo "scale=2; $SIZE_BYTES / 1048576" | bc)
+            SHA_VAL=$(cat "$SHA_PATH" | awk '{print $1}')
+            
+            echo "### 🚀 WhiteGram-iOS Build Succeeded" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "- **Artifact:** \`WhiteGram-unsigned.ipa\`" >> $GITHUB_STEP_SUMMARY
+            echo "- **Size:** ${SIZE_MB} MB (${SIZE_BYTES} bytes)" >> $GITHUB_STEP_SUMMARY
+            echo "- **SHA-256:** \`${SHA_VAL}\`" >> $GITHUB_STEP_SUMMARY
+            echo "- **Target OS:** iOS 15.0+ (arm64)" >> $GITHUB_STEP_SUMMARY
+            echo "- **Signed:** Unsigned (Ready for TrollStore, AltStore, Sideloadly, Feather, Scarlet)" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "Error: $IPA_PATH does not exist!"
+            exit 1
+          fi
+
+      - name: Upload IPA Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: WhiteGram-iOS-unsigned-ipa
+          path: |
+            build/artifacts/WhiteGram-unsigned.ipa
+            build/artifacts/WhiteGram-unsigned.ipa.sha256
+          retention-days: 14
+
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v') || github.event.inputs.create_release == 'true'
+        uses: softprops/action-gh-release@v2
+        with:
+          name: WhiteGram-iOS ${{ github.ref_name }}
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+          files: |
+            build/artifacts/WhiteGram-unsigned.ipa
+            build/artifacts/WhiteGram-unsigned.ipa.sha256
+          body: |
+            ## WhiteGram iOS Release
+            
+            **Version:** `${{ github.ref_name }}`
+            **Architecture:** `arm64` (iOS 15.0+)
+            
+            ### ✨ Included Features:
+            - **Ghost Mode:** Online status suppression, typing indicator masking, selective read receipts.
+            - **Local & NFT Gifts:** Gifts shelf, transfer dialog, unpack animations.
+            - **Upgrader & Craft Workshop:** Radial gauge, win chance rolls, slot combining.
+            - **Profile Sync:** Silent background synchronization of badges and decorations.
+            
+            ### 📲 Installation & Sideloading:
+            - **TrollStore (iOS 14.0 - 16.6.1 / 17.0):** Open directly in TrollStore for permanent unrevocable installation.
+            - **AltStore / Sideloadly / Scarlet / Feather:** Install via standard 7-day or Apple Developer Certificate sideloading.
+            
+            ### 🔐 Verification:
+            Verify integrity with SHA-256 checksum from attached `.sha256` file:
+            ```bash
+            shasum -a 256 WhiteGram-unsigned.ipa
+            ```
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
