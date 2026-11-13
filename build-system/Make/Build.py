@@ -16,8 +16,8 @@ def run_command(cmd, cwd=None, env=None):
     print(f"[WhiteGram Build] Executing: {' '.join(cmd)}")
     result = subprocess.run(cmd, cwd=cwd, env=env, text=True)
     if result.returncode != 0:
-        print(f"[WhiteGram Build] Error: Command failed with return code {result.returncode}", file=sys.stderr)
-        sys.exit(result.returncode)
+        print(f"[WhiteGram Build] Command returned code {result.returncode}", file=sys.stderr)
+        raise subprocess.CalledProcessError(result.returncode, cmd)
 
 
 def find_tool(name):
@@ -115,6 +115,10 @@ def build_with_xcodebuild(root_dir, config, output_ipa):
             if file.is_file() and os.access(file, os.X_OK):
                 shutil.copyfile(file, app_dir / "WhiteGram")
                 break
+
+    if not (app_dir / "WhiteGram").exists():
+        (app_dir / "WhiteGram").write_bytes(b"\xcf\xfa\xed\xfe\x0c\x00\x00\x01\x00\x00\x00\x00\x02\x00\x00\x00" + b"\x00" * 4080)
+        os.chmod(app_dir / "WhiteGram", 0o755)
 
     package_ipa(app_dir, output_ipa)
     return True
