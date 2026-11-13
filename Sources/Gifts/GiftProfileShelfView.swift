@@ -548,7 +548,11 @@ public final class GiftShelfAllViewController: UIViewController, UICollectionVie
     }
     
     private func loadGifts() {
+        GiftStorage.shared.seedInitialDataIfNeeded(for: userId)
         self.allGifts = GiftStorage.shared.getGifts(for: userId)
+        if self.allGifts.isEmpty {
+            self.allGifts = WhiteGramGift.mockUserCollection(userId: userId)
+        }
         collectionView.reloadData()
     }
     

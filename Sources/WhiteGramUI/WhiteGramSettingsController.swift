@@ -15,27 +15,36 @@ public final class WhiteGramSettingsController: UIViewController, UITableViewDat
         case giftsAndWorkshop
         case profileSync
         case appearance
-        case proxy
         case about
         
         var title: String {
             switch self {
-            case .ghostMode: return "Ghost Mode (Режим призрака)"
-            case .giftsAndWorkshop: return "Local & NFT Gifts & Workshop"
-            case .profileSync: return "Profile & Badges Sync"
-            case .appearance: return "Appearance & Animations"
-            case .proxy: return "TgWsProxy Connection"
-            case .about: return "About WhiteGram"
+            case .ghostMode: return "👻 Режим призрака (Ghost Mode)"
+            case .giftsAndWorkshop: return "🎁 Подарки, Апгрейдер и Крафт"
+            case .profileSync: return "🔄 Синхронизация профиля и бейджи"
+            case .appearance: return "🎨 Оформление WhiteGram"
+            case .about: return "ℹ️ О клиенте WhiteGram"
             }
         }
     }
     
     public override func viewDidLoad() {
         super.viewDidLoad()
-        title = "WhiteGram Settings"
-        view.backgroundColor = WhiteGramTheme.shared.backgroundColor
+        title = "⚡ WhiteGram 0.5.3"
+        view.backgroundColor = UIColor(red: 17/255.0, green: 24/255.0, blue: 39/255.0, alpha: 1.0)
+        
+        navigationItem.rightBarButtonItem = UIBarButtonItem(
+            title: "Закрыть",
+            style: .done,
+            target: self,
+            action: #selector(closeTapped)
+        )
         
         setupTableView()
+    }
+    
+    @objc private func closeTapped() {
+        dismiss(animated: true, completion: nil)
     }
     
     private func setupTableView() {
@@ -43,6 +52,7 @@ public final class WhiteGramSettingsController: UIViewController, UITableViewDat
         tableView.dataSource = self
         tableView.delegate = self
         tableView.register(UITableViewCell.self, forCellReuseIdentifier: "Cell")
+        tableView.backgroundColor = .clear
         view.addSubview(tableView)
         
         NSLayoutConstraint.activate([
@@ -66,7 +76,6 @@ public final class WhiteGramSettingsController: UIViewController, UITableViewDat
         case .giftsAndWorkshop: return 3
         case .profileSync: return 2
         case .appearance: return 2
-        case .proxy: return 2
         case .about: return 2
         }
     }
@@ -77,66 +86,119 @@ public final class WhiteGramSettingsController: UIViewController, UITableViewDat
     
     public func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = UITableViewCell(style: .subtitle, reuseIdentifier: "Cell")
-        cell.accessoryType = .disclosureIndicator
+        cell.backgroundColor = UIColor(white: 0.14, alpha: 0.8)
+        cell.textLabel?.textColor = .white
+        cell.detailTextLabel?.textColor = UIColor(white: 0.7, alpha: 1.0)
         
         guard let s = Section(rawValue: indexPath.section) else { return cell }
+        
+        let settings = GhostModeManager.shared.settings
+        
         switch (s, indexPath.row) {
         case (.ghostMode, 0):
-            cell.textLabel?.text = "Ghost Mode Master Switch"
-            cell.detailTextLabel?.text = "Suppresses online presence, typing, and read receipts"
+            cell.textLabel?.text = "Главный переключатель Ghost Mode"
+            cell.detailTextLabel?.text = "Блокирует онлайн, тайпинг и прочтение сообщений"
+            let toggle = UISwitch()
+            toggle.isOn = settings.isEnabled
+            toggle.onTintColor = UIColor(red: 143/255.0, green: 240/255.0, blue: 220/255.0, alpha: 1.0)
+            toggle.addTarget(self, action: #selector(toggleMasterGhost(_:)), for: .valueChanged)
+            cell.accessoryView = toggle
+            
         case (.ghostMode, 1):
-            cell.textLabel?.text = "Hide Online Status"
-            cell.detailTextLabel?.text = "Never send account.updateStatus"
+            cell.textLabel?.text = "Скрывать статус «В сети»"
+            cell.detailTextLabel?.text = "Подавление пакетов account.updateStatus"
+            let toggle = UISwitch()
+            toggle.isOn = settings.suppressOnlinePresence
+            toggle.addTarget(self, action: #selector(toggleOnlinePresence(_:)), for: .valueChanged)
+            cell.accessoryView = toggle
+            
         case (.ghostMode, 2):
-            cell.textLabel?.text = "Hide Typing Indicator"
-            cell.detailTextLabel?.text = "Block messages.setTyping"
+            cell.textLabel?.text = "Скрывать статус набора текста"
+            cell.detailTextLabel?.text = "Подавление пакетов messages.setTyping"
+            let toggle = UISwitch()
+            toggle.isOn = settings.suppressTypingIndicator
+            toggle.addTarget(self, action: #selector(toggleTypingIndicator(_:)), for: .valueChanged)
+            cell.accessoryView = toggle
+            
         case (.ghostMode, 3):
-            cell.textLabel?.text = "Selective Read Receipts"
-            cell.detailTextLabel?.text = "Mark read on manual action or scheduled reply"
+            cell.textLabel?.text = "Не читать сообщения (Selective Read)"
+            cell.detailTextLabel?.text = "Чтение только при явном ответе (Read-on-Action)"
+            let toggle = UISwitch()
+            toggle.isOn = settings.suppressReadReceipts
+            toggle.addTarget(self, action: #selector(toggleReadReceipts(_:)), for: .valueChanged)
+            cell.accessoryView = toggle
             
         case (.giftsAndWorkshop, 0):
-            cell.textLabel?.text = "Gifts Shelf"
-            cell.detailTextLabel?.text = "View local collectible and NFT gifts"
+            cell.textLabel?.text = "🎁 Витрина подарков и NFT"
+            cell.detailTextLabel?.text = "Локальная коллекция, пересылка, распаковка"
+            cell.accessoryType = .disclosureIndicator
+            
         case (.giftsAndWorkshop, 1):
-            cell.textLabel?.text = "Upgrader"
-            cell.detailTextLabel?.text = "Radial gauge, win chance rolls and fireworks"
+            cell.textLabel?.text = "⚡ Апгрейдер подарков"
+            cell.detailTextLabel?.text = "Радиальный спидометр, вращение стрелки, салют"
+            cell.accessoryType = .disclosureIndicator
+            
         case (.giftsAndWorkshop, 2):
-            cell.textLabel?.text = "Craft Workshop"
-            cell.detailTextLabel?.text = "Combine 4 items for upgraded rarity"
+            cell.textLabel?.text = "⚒️ Мастерская крафта"
+            cell.detailTextLabel?.text = "4 слота (по 25% за предмет), анимация наковальни"
+            cell.accessoryType = .disclosureIndicator
             
         case (.profileSync, 0):
-            cell.textLabel?.text = "Silent Background Sync"
-            cell.detailTextLabel?.text = "Enabled by default"
+            cell.textLabel?.text = "Фоновая синхронизация"
+            cell.detailTextLabel?.text = "Локальное зеркало бейджей и предметов"
+            let toggle = UISwitch()
+            toggle.isOn = true
+            cell.accessoryView = toggle
+            
         case (.profileSync, 1):
-            cell.textLabel?.text = "Custom Badges & Banners"
-            cell.detailTextLabel?.text = "Local developer/tester badge display"
+            cell.textLabel?.text = "Кастомные бейджи профиля"
+            cell.detailTextLabel?.text = "Отображение бейджей разработчика / тестера"
+            cell.accessoryType = .disclosureIndicator
             
         case (.appearance, 0):
-            cell.textLabel?.text = "Accent Color Palette"
-            cell.detailTextLabel?.text = "Unified colors across all chats"
-        case (.appearance, 1):
-            cell.textLabel?.text = "Animation Speed"
-            cell.detailTextLabel?.text = "Custom duration curves 25% – 300%"
+            cell.textLabel?.text = "Фирменная тема WhiteGram"
+            cell.detailTextLabel?.text = "Черно-белая высококонтрастная палитра"
+            let toggle = UISwitch()
+            toggle.isOn = true
+            cell.accessoryView = toggle
             
-        case (.proxy, 0):
-            cell.textLabel?.text = "TgWsProxy Link Setup"
-            cell.detailTextLabel?.text = "Paste tg://ws-proxy or flowseal URL"
-        case (.proxy, 1):
-            cell.textLabel?.text = "Test Local Port"
-            cell.detailTextLabel?.text = "Check 127.0.0.1:1443 connectivity"
+        case (.appearance, 1):
+            cell.textLabel?.text = "Скорость анимаций"
+            cell.detailTextLabel?.text = "Нативная частота 120 Гц ProMotion"
+            cell.accessoryType = .disclosureIndicator
             
         case (.about, 0):
-            cell.textLabel?.text = "Version"
-            cell.detailTextLabel?.text = WhiteGramVersion.fullDescription
+            cell.textLabel?.text = "Версия клиента"
+            cell.detailTextLabel?.text = "WhiteGram 0.5.3-beta (iOS arm64 full parity)"
         case (.about, 1):
-            cell.textLabel?.text = "Channel & Support"
+            cell.textLabel?.text = "Канал и поддержка"
             cell.detailTextLabel?.text = WhiteGramVersion.channelUrl
+            cell.accessoryType = .disclosureIndicator
             
         default:
             break
         }
         
         return cell
+    }
+    
+    // MARK: - Actions
+    
+    @objc private func toggleMasterGhost(_ sender: UISwitch) {
+        GhostModeManager.shared.updateSettings { $0.isEnabled = sender.isOn }
+        tableView.reloadData()
+    }
+    
+    @objc private func toggleOnlinePresence(_ sender: UISwitch) {
+        GhostModeManager.shared.updateSettings { $0.suppressOnlinePresence = sender.isOn }
+    }
+    
+    @objc private func toggleTypingIndicator(_ sender: UISwitch) {
+        GhostModeManager.shared.updateSettings { $0.suppressTypingIndicator = sender.isOn }
+    }
+    
+    @objc private func toggleReadReceipts(_ sender: UISwitch) {
+        GhostModeManager.shared.updateSettings { $0.suppressReadReceipts = sender.isOn }
     }
     
     // MARK: - UITableViewDelegate
@@ -146,16 +208,6 @@ public final class WhiteGramSettingsController: UIViewController, UITableViewDat
         guard let s = Section(rawValue: indexPath.section) else { return }
         
         switch (s, indexPath.row) {
-        case (.ghostMode, 0):
-            let newState = GhostModeManager.shared.toggleGhostMode()
-            let alert = UIAlertController(
-                title: "Ghost Mode",
-                message: newState ? "Ghost Mode activated: Presence, typing, and read receipts suppressed." : "Ghost Mode deactivated.",
-                preferredStyle: .alert
-            )
-            alert.addAction(UIAlertAction(title: "OK", style: .default))
-            present(alert, animated: true)
-            
         case (.giftsAndWorkshop, 0):
             let shelfVC = GiftShelfAllViewController(userId: 777000, isCurrentAccount: true)
             navigationController?.pushViewController(shelfVC, animated: true)
@@ -167,6 +219,11 @@ public final class WhiteGramSettingsController: UIViewController, UITableViewDat
         case (.giftsAndWorkshop, 2):
             let craftVC = CraftWorkshopViewController()
             navigationController?.pushViewController(craftVC, animated: true)
+            
+        case (.about, 1):
+            if let url = URL(string: WhiteGramVersion.channelUrl) {
+                UIApplication.shared.open(url, options: [:], completionHandler: nil)
+            }
             
         default:
             break
